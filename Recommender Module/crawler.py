@@ -5,6 +5,10 @@ import cloudscraper
 from bs4 import BeautifulSoup
 import argparse
 
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+
 
 class Client_v3:
     '''
@@ -17,6 +21,7 @@ class Client_v3:
         self.last_execution = 0
         self.verbose = verbose
         self.MAX_TRIAL_COUNT = 10
+        self.MAX_PAGES = 50
         self.interval = 0.5 if self.api_key == '' else 0
 
     def get_transaction_by_address(self, address):
@@ -77,17 +82,26 @@ class Client_v3:
         '''
         # Scraping the initial page for retrieving the sid (which is a JavaScript variable)
         trial_count = 0
+        link_iframe_tabela = ""
         while True:
             error = False
             try:
                 url = f'https://etherscan.io/token/{address}'
-                scraper = cloudscraper.create_scraper()
+                scraper = cloudscraper.create_scraper(delay=10)
+                # driver = webdriver.Chrome(ChromeDriverManager().install())
+
                 logging.info(f'Scraping the initial page of token with address {address} from URL: {url}')
                 if self.verbose >= 1:
                     print(f'Scraping the initial page of token with address {address} from URL: {url}')
                 response = scraper.get(url.format(address))
                 page = response.text
-                sid = page[page.find('sid')+7:page.find('sid')+39]
+                outside_pos = page.find('outside')
+                sid_start = outside_pos + len("outside")
+                # print(page.find('sid', sid_start))
+                # print(page[page.find('sid', sid_start):page.find('sid', sid_start)+40])
+                # print(page[page.find('sid', sid_start)+7:page.find('sid', sid_start)+39])
+                
+                sid = page[page.find('sid', sid_start)+7:page.find('sid', sid_start)+39]
                 if response.status_code == 200:
                     self.last_execution = time.time()
             except Exception as e:
@@ -106,7 +120,7 @@ class Client_v3:
                         time.sleep(self.interval)
                         logging.info(f'Sleeping for {self.interval}s before making another request')
                     if trial_count > self.MAX_TRIAL_COUNT:
-                        scraper = cloudscraper.create_scraper()
+                        scraper = cloudscraper.create_scraper(delay=10)
                         logging.info('Replacing with a new scraper')
                 else:
                     break
@@ -131,27 +145,49 @@ class Client_v3:
                 response = scraper.get(url.format(address, sid, p))
                 page = response.text
                 soup = BeautifulSoup(page, 'lxml')
+                # with open("t.html", "w") as fff:
+                #     fff.write(page)
                 self.last_execution = time.time()
                 if response.status_code == 200:
                     self.last_execution = time.time()
 
                 # Retrieve page count
                 if page_count == 'Unknown':
-                    page_count = int(soup.findAll('strong')[1].text)
+                    a = soup.findAll('span', {"class": ["text-nowrap", "page-link"]})
+                    page_count = int(a[-1].text.split(" ")[-1])
+                    page_count = min(page_count, self.MAX_PAGES)
+                    print("Page count:", page_count)
 
                 # Retrieve data in the table
                 table = soup.findAll('tr')[1:]
+                # print(len(table))
                 for tr in table: # scan every row in the table
-                    txn_hash.append(tr.find('a').text)
-                    transaction_date.append(tr.find('span', attrs={'data-placement': 'bottom'}).text)
-                    from_address.append(tr.findAll('a', attrs={'class': 'hash-tag text-truncate'})[0]['href'][-42:])
-                    to_address.append(tr.findAll('a', attrs={'class': 'hash-tag text-truncate'})[1]['href'][-42:])
-                    quantity.append(float(tr.findAll('td')[-2].text.replace(',', '')))
+                    # print(tr.text)
+                    txn = tr.find('a').text
+                    # print(txn_hash)
+
+                    transac = tr.find('span', attrs={'data-bs-title': True}).text
+                    # print(transaction_date)
+
+                    faddr = tr.findAll('a', attrs={'class': 'hash-tag text-truncate'})[0]['href'][-42:]
+                    
+                    # print(from_address)
+
+                    taddr = tr.findAll('a', attrs={'class': 'hash-tag text-truncate'})[1]['href'][-42:]
+                    # print(to_address)
+
+                    q = float(tr.findAll('td')[-1].text.replace(',', ''))
+
+                    txn_hash.append(txn)
+                    transaction_date.append(transac)
+                    from_address.append(faddr)
+                    to_address.append(taddr)
+                    quantity.append(q)
                 trial_count = 0
             except Exception as e:
                 logging.info(f'An error encountered while scraping transaction record of token address {address} from URL: {url}. Last request was sent in {time.time() - self.last_execution:.2f}s. trial_count = {trial_count}')
                 print(e)
-                print(response, page)
+                # print(response, page)
                 error = True
                 trial_count += 1
             finally:
@@ -160,7 +196,7 @@ class Client_v3:
                         time.sleep(self.interval)
                         logging.info(f'Sleeping for {self.interval}s before making another request')
                     if trial_count > self.MAX_TRIAL_COUNT:
-                        scraper = cloudscraper.create_scraper()
+                        scraper = cloudscraper.create_scraper(delay=10)
                         logging.info('Replacing with a new scraper')
                 else:
                     # Check whether it is the last page of available transaction records

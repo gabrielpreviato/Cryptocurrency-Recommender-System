@@ -19,11 +19,11 @@ if os.path.exists(root+'node_list.txt'):
 # Put top 20 token addresses here
 token_address_list = [
     '0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e', # YFI
-    '0xba100000625a3754423978a60c9317c58a424e3d'  # BAL
+    # '0xba100000625a3754423978a60c9317c58a424e3d'  # BAL
 ] 
 
 transaction_data_dict = dict()
-client = Client_v3(verbose=1)
+client = Client_v3(verbose=0)
 node_list = []
 try:
     for token_address in token_address_list:
@@ -34,6 +34,7 @@ try:
     node_list = list(set(node_list))
 except Exception as e:
     print(e)
+    exit(0)
 finally:
     with open(root+'transaction_data_by_token_address_dict.pkl', 'wb') as f:
         pkl.dump(transaction_data_dict, f)
