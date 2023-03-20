@@ -46,7 +46,7 @@ def recommend(user_address):
     '''
 
     # Obtain user data
-    f = open('CF_data', 'rb')
+    f = open('cf_data.pkl', 'rb')
     cf_data = pk.load(f)
     client = Client_v3(api_key='UCJ24GP9ICCR28QNPDNCXZ27VHWIG442F6', verbose=0)
 
