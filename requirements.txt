@@ -3,3 +3,4 @@ cloudscraper==1.2.69
 pandas==1.4.2
 selenium==4.8.2
 webdriver_manager==3.8.5
+lxml==4.9.2
