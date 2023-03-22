@@ -10,3 +10,4 @@ pycoingecko==3.1.0
 requests==2.27.1
 scikit_learn==1.2.2
 torch==1.11.0+cu113
+pycoingecko==3.1.0
