@@ -4,3 +4,9 @@ pandas==1.4.2
 selenium==4.8.2
 webdriver_manager==3.8.5
 lxml==4.9.2
+joblib==1.1.0
+numpy==1.22.3
+pycoingecko==3.1.0
+requests==2.27.1
+scikit_learn==1.2.2
+torch==1.11.0+cu113
